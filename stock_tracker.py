@@ -4,7 +4,7 @@ NOTE: make sure to create separate functions for each task (email one function, 
 
 1) Use Groww URL to scrape the name and price - DONE
 2) Find the second child of a div using XPath - DONE
-3) How to send an email using SMTP in Python - 
+3) How to send an email using SMTP in Python - DONE
 4) How to send WhatsApp message using Python (explore Twilio module)
 5) How to call Python script at a specific time
 6) Find other Python packages for scheduling the job
@@ -28,6 +28,9 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+import smtplib
+import os
+from dotenv import load_dotenv
 
 
 # SCRAPING NAME AND PRICE OF THE STOCK
@@ -44,7 +47,7 @@ def get_stock_title(url):
     
     try:
         driver.get(url)
-        time.sleep(3)
+        time.sleep(1) # allow JS to load
         name_element = driver.find_element(By.CLASS_NAME, "lpu38Head.truncate.displaySmall")
         return name_element.text.strip()
     except Exception as e:
@@ -52,7 +55,6 @@ def get_stock_title(url):
         return "Error"
     finally:
         driver.quit()
-
 
 def get_stock_price(url):
     options = webdriver.ChromeOptions()
@@ -72,13 +74,37 @@ def get_stock_price(url):
     finally:
         driver.quit()
 
+def sending_mail():
+    # loading sensitive data from env file
+
+    sender_email = os.getenv("EMAIL_SENDER")
+    app_password = os.getenv("EMAIL_PASSWORD")
+    receiver_email = os.getenv("RECEIVER_EMAIL")
+
+    subject = input("SUBJECT: ")
+    message = input("MESSAGE: ")
+
+    text = f"Subject: {subject}\n\n{message}"
+
+    #Creating a server for sending an email
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+
+    server.login(sender_email, app_password)
+
+    server.sendmail(sender_email, receiver_email, text)
+
+    print("Email has been sent to " + receiver_email)
+    return "Success"
+
 
 # PRINTING ALL THE STUFFS
 
 name = get_stock_title(url)
-price  = get_stock_price(url)
-
 print("Stock Name: ", name)
+
+price  = get_stock_price(url)
 print("Stock Price: ", price)
 
-
+email = sending_mail()
+print("Mail send succesfully", email)
