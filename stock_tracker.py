@@ -21,16 +21,18 @@ NOTE: make sure to create separate functions for each task (email one function, 
 
 '''
 
+import os
+import time
+import smtplib
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
-import time
-import smtplib
-import os
 from dotenv import load_dotenv
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
 # SCRAPING NAME AND PRICE OF THE STOCK
@@ -48,11 +50,13 @@ def get_stock_title(url):
     try:
         driver.get(url)
         time.sleep(1) # allow JS to load
-        name_element = driver.find_element(By.CLASS_NAME, "lpu38Head.truncate.displaySmall")
+        name_element = driver.find_element(By.XPATH, "/html/body/div[1]/div[2]/div[2]/div[1]/div/div/div[1]/div[2]/div[1]/div[2]/div[2]/div[1]/h1")
         return name_element.text.strip()
+    
     except Exception as e:
         print("Error fetching title:", e)
         return "Error"
+    
     finally:
         driver.quit()
 
@@ -63,42 +67,49 @@ def get_stock_price(url):
     options.add_argument("--disable-dev-shm-usage")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    
     try:
         driver.get(url)
         time.sleep(3)  # allow JS to load
         price_element = driver.find_element(By.XPATH, '/html/body/div[1]/div[2]/div[2]/div[1]/div/div/div[1]/div[2]/div[1]/div[2]/div[3]/div/div[1]/span[2]')
         return price_element.text.strip()
+    
     except Exception as e:
         print("Error fetching price:", e)
         return "Error"
+    
     finally:
         driver.quit()
 
-def sending_mail():
+def sending_mail(stock_name, stock_price):
+    
     # loading sensitive data from env file
-
     sender_email = os.getenv("EMAIL_SENDER")
     app_password = os.getenv("EMAIL_PASSWORD")
     receiver_email = os.getenv("RECEIVER_EMAIL")
 
-    subject = input("SUBJECT: ")
-    message = input("MESSAGE: ")
+    subject = f"Stock Alert: {stock_name}"
+    body = f"{stock_name}\nCurrent Price: ₹{stock_price}"
 
-    text = f"Subject: {subject}\n\n{message}"
+    # creating the email message
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+
+    msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
     #Creating a server for sending an email
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
-
     server.login(sender_email, app_password)
-
-    server.sendmail(sender_email, receiver_email, text)
+    server.sendmail(sender_email, receiver_email, msg.as_string())
 
     print("Email has been sent to " + receiver_email)
     return "Success"
 
 
-# PRINTING ALL THE STUFFS
+# PRINTING ALL THE DATA
 
 name = get_stock_title(url)
 print("Stock Name: ", name)
@@ -106,5 +117,5 @@ print("Stock Name: ", name)
 price  = get_stock_price(url)
 print("Stock Price: ", price)
 
-email = sending_mail()
-print("Mail send succesfully", email)
+email_status = sending_mail(name, price)
+print("Mail send status: ", email_status)
