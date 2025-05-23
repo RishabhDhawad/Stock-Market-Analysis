@@ -6,14 +6,14 @@ NOTE: make sure to create separate functions for each task (email one function, 
 2) Find the second child of a div using XPath - DONE
 3) How to send an email using SMTP in Python - DONE
 4) How to send WhatsApp message using Python (explore Twilio module) - DONE
-7) Stock info(name and price) should be sent to Email and WhatsApp at 9:17 am IST, and how much is the difference in Plus/Minus from the last day, that info should  also be sent
-8)      Last day price: 100 Rs Store it before 9 am
+5) Stock info(name and price) should be sent to Email and WhatsApp at 9:17 am IST, and how much is the difference in Plus/Minus from the last day, that info should  also be sent
+6)      Last day price: 100 Rs Store it before 9 am
         Email: 9.17 am
         IRCON:
         Today's Price: 50 Rs
         Difference from yesterday: -50Rs and -50%
 
-9)  Send the price alert every 15 minutes:    
+7)  Send the price alert every 15 minutes:    
         15 Minutes Alert:
         IRCON:203
 
@@ -35,9 +35,11 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.message import EmailMessage
 from twilio.rest import Client
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
 
 load_dotenv()
 
@@ -66,11 +68,12 @@ def get_stock_data(url):
         price_element = driver.find_element(By.XPATH, '/html/body/div[1]/div[2]/div[2]/div[1]/div/div/div[1]/div[2]/div[1]/div[2]/div[3]/div/div[1]/span[2]')
         stock_price = price_element.text.strip()
 
-        mail_response = sending_mail(stock_name, stock_price)
-        if mail_response == "Success":
-            print("Mail sent sucessfully")
-        else:
-            print("Mail failed")
+        return stock_name,stock_price
+        # mail_response = sending_mail(stock_name, stock_price)
+        # if mail_response == "Success":
+        #     print("Mail sent sucessfully")
+        # else:
+        #     print("Mail failed")
 
     except Exception as e:
         print("Error fetching stock data:", e)
@@ -79,32 +82,34 @@ def get_stock_data(url):
     finally:
         driver.quit()
 
-def sending_mail(stock_name, stock_price):
-# def sending_mail(Sender, Receiver, Subject, Body):
+# def sending_mail(stock_name, stock_price):
+def sending_mail(Sender, Receiver, Subject, Body):
     
     # loading sensitive data from env file
-    sender_email = os.getenv("EMAIL_SENDER")
+    # sender_email = os.getenv("EMAIL_SENDER")
     app_password = os.getenv("APP_PASSWORD")
-    receiver_email = os.getenv("RECEIVER_EMAIL").split(",")
+    # receiver_email = os.getenv("RECEIVER_EMAIL").split(",")
 
-    subject = f"Stock Alert: {stock_name}"
-    body = f"{stock_name}\nCurrent Price: ₹{stock_price}"
+    Subject = f"Stock Alert: {stock_name}"
+    # body = f"{stock_name}\nCurrent Price: ₹{stock_price}"
+    # body = create_stock_message(stock_name, stock_price)
 
     # creating the email message
     msg = MIMEMultipart()
-    msg['From'] = sender_email
-    msg['To'] = ",".join(receiver_email)
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+    msg['From'] = Sender
+    msg['To'] = ",".join(Receiver) if isinstance(Receiver, list) else Receiver
+    msg['Subject'] = Subject
+    # msg.set_content(Body)
+    msg.attach(MIMEText(Body, 'plain', 'utf-8'))
 
     #Creating a server for sending an email
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(sender_email, app_password)
-        server.sendmail(sender_email, receiver_email, msg.as_string())
+        server.login(Sender, app_password)
+        server.sendmail(Sender, Receiver, msg.as_string())
         server.quit()
-        print("Email has been sent to " + ",".join(receiver_email))
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Email sent to {msg['To']}")
         return "Success"
     except Exception as e:
         print("Failed to send email:", e)
@@ -121,76 +126,80 @@ time module
 4) send message
 """
 
+# Twilio Credentials
+recipient_name = os.getenv('RECIPIENT_NAME')
+recipient_number = os.getenv('RECIPIENT_NUMBER')
+schedule_date = os.getenv('SCHEDULE_DATE')  # Format: YYYY-MM-DD
+schedule_time = os.getenv('SCHEDULE_TIME')  # Format: HH:MM (24-hour)
+
+schedule_datetime = datetime.strptime(f'{schedule_date} {schedule_time}', "%Y-%m-%d %H:%M")
+current_datetime = datetime.now()
+delay_seconds = (schedule_datetime - current_datetime).total_seconds()
 
 # SEND WHATSAPP MESSAGE
 def send_whatsapp_msg(recipient_number, message_body):
     
-    # Twilio Credentials
     account_sid = os.getenv('ACCOUNT_SID')
     auth_token = os.getenv('AUTH_TOKEN')
     client = Client(account_sid, auth_token)
-
     try:
         message = client.messages.create(
             from_='whatsapp:+14155238886',
             body = message_body,
             to = f"whatsapp:{recipient_number}"
         )
-        print(f"Message sent sucessfully! Message SID{message.sid}")
+        print(f"Message sent successfully! Message SID: {message.sid}")
     except Exception as e:
-        print('An error occured', e)
+        print('Error sending WhatsApp message:', e)
 
 # user input
-recipient_name  = input('Enter the recipient name: ')
-recepient_number = input('Enter the recipient whatsapp number with conuntry code (e.g, +91): ')
+# recipient_name  = input('Enter the recipient name: ')
+# recipient_number = input('Enter the recipient whatsapp number with conuntry code (e.g, +91): ')
 # custom_msg  = input(f"Enter the message you want to send to {recipient_name }: ")
 
-# parse date/time and calculation delay
-date_str = input("Enter the date to send the message (YYY-MM-DD) eg 2025-05-22: ")
-time_str = input("Enter the time to send the message (HH:MM in 24 hour format): ")
+# # parse date/time and calculation delay
+# date_str = input("Enter the date to send the message (YYY-MM-DD) eg 2025-05-22: ")
+# time_str = input("Enter the time to send the message (HH:MM in 24 hour format): ")
 
-#date time
-schedule_datetime = datetime.strptime(f'{date_str} {time_str}', "%Y-%m-%d %H:%M")
-current_datetime = datetime.now()
+# schedule_date = "2025-05-22"
+# schedule_time = "17:16"  # 24-hour format "HH:MM"
 
-#calculate delay
-time_difference = schedule_datetime - current_datetime
-delay_seconds = time_difference.total_seconds()
+# # PARSE SCHEDULE DATETIME 
+# schedule_datetime = datetime.strptime(f'{schedule_date} {schedule_time}', "%Y-%m-%d %H:%M")
+# current_datetime = datetime.now()
+# delay_seconds = (schedule_datetime - current_datetime).total_seconds()
 
+# Messaginf Content
+def create_stock_message(stock_name, stock_price):
+    recipient_name = os.getenv("RECIPIENT_NAME")  # moved inside
+    return f"""
+Hello {recipient_name},
+📈 Stock Alert:
+✨ {stock_name}
+✨ Current Price: ₹{stock_price}
+
+Stay updated and invest wisely!
+"""
+
+
+# SCHEDULING LOGIC 
 if delay_seconds <= 0:
-    print('The specified time is in the past. Please eanter a future date and time')
+    print('The specified time is in the past. Please update the schedule_date or schedule_time.')
 else:
-    print(f'Message scheduled to be send to {recipient_name } at {schedule_datetime}')
+    print(f'Message scheduled to be sent to {recipient_name} at {schedule_datetime}')
+    time.sleep(delay_seconds)
 
     # Fetch stock data
     stock_name, stock_price = get_stock_data(url)
+    custom_msg = create_stock_message(stock_name, stock_price)
+
+    # Sending Whatsapp 
+    send_whatsapp_msg(recipient_number, custom_msg)
     
-    # Compose message using fetched stock data
-    custom_msg = f"""
-    Hello {recipient_name},
-    📈 Stock Alert:
-    ✨ {stock_name}
-    ✨ Current Price: ₹{stock_price}
-    
-    Stay updated and invest wisely!
-    """
-
-    #wait untill the schedule time
-    time.sleep(delay_seconds) #1000
-
-    #send the message
-    send_whatsapp_msg(recepient_number, custom_msg)
-
+    # Sending Mail
     email_subject = f"Stock Alert: {stock_name}"
     email_status = sending_mail(email_subject, custom_msg)
-    print("Mail send status: ", email_status)
+    print("Email sent status: ", email_status)
 
-
-# PRINTING ALL THE DATA
-
-name, price = get_stock_data(url)
-print("Stock Name:", name)
-print("Stock Price:", price)
-
-# email_status = sending_mail(name, price)
-# print("Mail send status: ", email_status)
+    print("Stock Name:", stock_name)
+    print("Stock Price:", stock_price)
