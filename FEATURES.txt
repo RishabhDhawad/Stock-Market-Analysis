@@ -1,0 +1,25 @@
+TODO:
+NOTE: make sure to create separate functions for each task (email one function, WhatsApp one function)
+
+1) Use Groww URL to scrape the name and price - DONE
+2) Find the second child of a div using XPath - DONE
+3) How to send an email using SMTP in Python - DONE
+4) How to send WhatsApp message using Python (explore Twilio module) - DONE
+5) Stock info(name and price) should be sent to Email and WhatsApp at 9:17 am IST, and how much is the difference in Plus/Minus from the last day, that info should  also be sent
+6)      Last day price: 100 Rs Store it before 9 am
+        Email: 9.17 am
+        IRCON:
+        Today's Price: 50 Rs
+        Difference from yesterday: -50Rs and -50%
+
+7)  Send the price alert every 15 minutes:    
+        15 Minutes Alert:
+        IRCON:203
+
+- 1. create one single function for taking stock name and price - DONE
+- 2. Send emails to multiple email ids -DONE
+- 3. Changes in Mail function with function arguments - DONE
+- 4. search all possible scheduling packages in python and use the one which suites the most - DONE
+
+1) Create seperate file for mail function
+2) Create seperate file for whatsapp function

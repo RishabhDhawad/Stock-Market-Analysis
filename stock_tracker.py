@@ -17,6 +17,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.blocking import BlockingScheduler
 from datetime import datetime
+from whatsapp import WhatsApp
+from mail import Mail
 
 load_dotenv()
 
@@ -88,23 +90,6 @@ def sending_mail(sender, receiver, subject, body):
         return "Failed"
 
 
-# Sends a WhatsApp message using Twilio
-def send_whatsapp_msg(recipient_number, message_body):
-    
-    account_sid = os.getenv('ACCOUNT_SID')
-    auth_token = os.getenv('AUTH_TOKEN')
-    client = Client(account_sid, auth_token)
-    try:
-        message = client.messages.create(
-            from_='whatsapp:os.env("TWILIO_WHATSAPP_NUMBER")',
-            body = message_body,
-            to = f"whatsapp:{recipient_number}"
-        )
-        print(f"Message sent successfully! Message SID: {message.sid}")
-    except Exception as e:
-        print('Error sending WhatsApp message:', e)
-
-
 # Builds the message text for both email and WhatsApp.
 def create_stock_message(stock_name, today_price, yesterday_price):
     diff = today_price - yesterday_price
@@ -162,8 +147,13 @@ def job_send_daily_summary():
     
     message = create_stock_message(stock_name, stock_price, yesterday_price)
 
-    sending_mail(Sender, Receiver, subject=f"{stock_name} Daily Summary", body=message)
-    send_whatsapp_msg(recipient_number, message)
+    mail_obj = Mail()
+    mail_response = mail_obj.sending_mail(Sender, Receiver, subject=f"{stock_name} Daily Summary", body=message)
+    print(mail_response)
+    
+    whatsapp_obj = WhatsApp()
+    whatsapp_response = whatsapp_obj.send_message(recipient_number, message)
+    print(whatsapp_response)
 
 
 # Sends alerts every 15 minutes during market hours.
@@ -183,8 +173,13 @@ def job_send_15_min_alert():
 
     message = create_stock_message(stock_name, stock_price, yesterday_price)
 
-    sending_mail(Sender, Receiver, subject=f"{stock_name} 15-Min Price Update", body=message)
-    send_whatsapp_msg(recipient_number, message)
+    mail_obj = Mail()
+    mail_response = mail_obj.sending_mail(Sender, Receiver, subject=f"{stock_name} 15-Min Price Update", body=message)
+    print(mail_response)
+    
+    whatsapp_obj = WhatsApp()
+    whatsapp_response = whatsapp_obj.send_message(recipient_number, message)
+    print(whatsapp_response)
 
 
 # Saves the stock price at 4 PM to be used as yesterday's reference.
@@ -215,21 +210,21 @@ def main():
     # Sets up and starts the APScheduler jobs.
     scheduler.add_job(
         job_save_yesterday_price,
-        CronTrigger(hour=21, minute=47),
+        CronTrigger(hour=16, minute=0, day_of_week='mon-fri'),
         name="Save Yesterday's Price (4 PM)"
     )
 
     # Daily Summary eamil at 9:17 AM
     scheduler.add_job(
         job_send_daily_summary,
-        CronTrigger(hour=21, minute=48),
+        CronTrigger(hour=9, minute=17, day_of_week='mon-fri'),
         name='Daily Summary Email'
     )
 
     # Alert every 15 minute
     scheduler.add_job(
         job_send_15_min_alert,
-        CronTrigger(minute='*/2', hour='9-23'),
+        CronTrigger(minute='*/15', hour='9-16', day_of_week='mon-fri'),
         name='15 min Alert'
     )
 
