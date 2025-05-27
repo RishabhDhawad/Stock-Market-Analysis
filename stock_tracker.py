@@ -1,33 +1,7 @@
-'''
-TODO:
-NOTE: make sure to create separate functions for each task (email one function, WhatsApp one function)
-
-1) Use Groww URL to scrape the name and price - DONE
-2) Find the second child of a div using XPath - DONE
-3) How to send an email using SMTP in Python - DONE
-4) How to send WhatsApp message using Python (explore Twilio module) - DONE
-5) Stock info(name and price) should be sent to Email and WhatsApp at 9:17 am IST, and how much is the difference in Plus/Minus from the last day, that info should  also be sent
-6)      Last day price: 100 Rs Store it before 9 am
-        Email: 9.17 am
-        IRCON:
-        Today's Price: 50 Rs
-        Difference from yesterday: -50Rs and -50%
-
-7)  Send the price alert every 15 minutes:    
-        15 Minutes Alert:
-        IRCON:203
-
-- 1. create one single function for taking stock name and price - DONE
-- 2. Send emails to multiple email ids -DONE
-- 3. Changes in Mail function with function arguments - IN PROGRESS
-- 4. search all possible scheduling packages in python and use the one which suites the most - IN PROGRESS
-
-'''
-
 import os
 import time
+import json
 import smtplib
-import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -40,13 +14,23 @@ from twilio.rest import Client
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.schedulers.blocking import BlockingScheduler
+from datetime import datetime
 
 load_dotenv()
 
+scheduler = BlockingScheduler()
 
-# SCRAPING NAME AND PRICE OF THE STOCK
+# Configuration For this Project
 url = "https://groww.in/stocks/ircon-international-ltd"
+Sender = os.getenv("EMAIL_SENDER")
+Receiver = os.getenv("RECEIVER_EMAIL").split(",")
+# Twilio Credentials - For Whatsapp
+recipient_name = os.getenv('RECIPIENT_NAME')
+recipient_number = os.getenv('RECIPIENT_NUMBER')
 
+# Scrapes the stock name and price from Groww using Selenium.
 def get_stock_data(url):
     
     options = webdriver.ChromeOptions()
@@ -69,11 +53,6 @@ def get_stock_data(url):
         stock_price = price_element.text.strip()
 
         return stock_name,stock_price
-        # mail_response = sending_mail(stock_name, stock_price)
-        # if mail_response == "Success":
-        #     print("Mail sent sucessfully")
-        # else:
-        #     print("Mail failed")
 
     except Exception as e:
         print("Error fetching stock data:", e)
@@ -82,32 +61,25 @@ def get_stock_data(url):
     finally:
         driver.quit()
 
-# def sending_mail(stock_name, stock_price):
-def sending_mail(Sender, Receiver, Subject, Body):
-    
-    # loading sensitive data from env file
-    # sender_email = os.getenv("EMAIL_SENDER")
+
+# Sends an email via SMTP
+def sending_mail(sender, receiver, subject, body):
+    # Loading sensitive data from env file
     app_password = os.getenv("APP_PASSWORD")
-    # receiver_email = os.getenv("RECEIVER_EMAIL").split(",")
 
-    Subject = f"Stock Alert: {stock_name}"
-    # body = f"{stock_name}\nCurrent Price: ₹{stock_price}"
-    # body = create_stock_message(stock_name, stock_price)
-
-    # creating the email message
+    # Creating the email message
     msg = MIMEMultipart()
-    msg['From'] = Sender
-    msg['To'] = ",".join(Receiver) if isinstance(Receiver, list) else Receiver
-    msg['Subject'] = Subject
-    # msg.set_content(Body)
-    msg.attach(MIMEText(Body, 'plain', 'utf-8'))
+    msg['From'] = sender
+    msg['To'] = ",".join(receiver) if isinstance(receiver, list) else receiver
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
-    #Creating a server for sending an email
+    # Creating a server for sending an email
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(Sender, app_password)
-        server.sendmail(Sender, Receiver, msg.as_string())
+        server.login(sender, app_password)
+        server.sendmail(sender, receiver, msg.as_string())
         server.quit()
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Email sent to {msg['To']}")
         return "Success"
@@ -115,28 +87,8 @@ def sending_mail(Sender, Receiver, Subject, Body):
         print("Failed to send email:", e)
         return "Failed"
 
-"""
-twilio module
-datetime module
-time module
 
-1) twilio client setup
-2) user inputs
-3) scheduling logic
-4) send message
-"""
-
-# Twilio Credentials
-recipient_name = os.getenv('RECIPIENT_NAME')
-recipient_number = os.getenv('RECIPIENT_NUMBER')
-schedule_date = os.getenv('SCHEDULE_DATE')  # Format: YYYY-MM-DD
-schedule_time = os.getenv('SCHEDULE_TIME')  # Format: HH:MM (24-hour)
-
-schedule_datetime = datetime.strptime(f'{schedule_date} {schedule_time}', "%Y-%m-%d %H:%M")
-current_datetime = datetime.now()
-delay_seconds = (schedule_datetime - current_datetime).total_seconds()
-
-# SEND WHATSAPP MESSAGE
+# Sends a WhatsApp message using Twilio
 def send_whatsapp_msg(recipient_number, message_body):
     
     account_sid = os.getenv('ACCOUNT_SID')
@@ -144,7 +96,7 @@ def send_whatsapp_msg(recipient_number, message_body):
     client = Client(account_sid, auth_token)
     try:
         message = client.messages.create(
-            from_='whatsapp:+14155238886',
+            from_='whatsapp:os.env("TWILIO_WHATSAPP_NUMBER")',
             body = message_body,
             to = f"whatsapp:{recipient_number}"
         )
@@ -152,54 +104,148 @@ def send_whatsapp_msg(recipient_number, message_body):
     except Exception as e:
         print('Error sending WhatsApp message:', e)
 
-# user input
-# recipient_name  = input('Enter the recipient name: ')
-# recipient_number = input('Enter the recipient whatsapp number with conuntry code (e.g, +91): ')
-# custom_msg  = input(f"Enter the message you want to send to {recipient_name }: ")
 
-# # parse date/time and calculation delay
-# date_str = input("Enter the date to send the message (YYY-MM-DD) eg 2025-05-22: ")
-# time_str = input("Enter the time to send the message (HH:MM in 24 hour format): ")
+# Builds the message text for both email and WhatsApp.
+def create_stock_message(stock_name, today_price, yesterday_price):
+    diff = today_price - yesterday_price
+    percent = (diff / yesterday_price) * 100 if yesterday_price else 0
 
-# schedule_date = "2025-05-22"
-# schedule_time = "17:16"  # 24-hour format "HH:MM"
-
-# # PARSE SCHEDULE DATETIME 
-# schedule_datetime = datetime.strptime(f'{schedule_date} {schedule_time}', "%Y-%m-%d %H:%M")
-# current_datetime = datetime.now()
-# delay_seconds = (schedule_datetime - current_datetime).total_seconds()
-
-# Messaginf Content
-def create_stock_message(stock_name, stock_price):
-    recipient_name = os.getenv("RECIPIENT_NAME")  # moved inside
+    recipient_name = os.getenv("RECIPIENT_NAME", "User") 
     return f"""
-Hello {recipient_name},
-📈 Stock Alert:
-✨ {stock_name}
-✨ Current Price: ₹{stock_price}
+    Hello {recipient_name},
+    📈 Stock Alert:
+    ✨ {stock_name}
+    ✨ Current Price: ₹{today_price}
+    ✨ Yesterday Price: ₹{yesterday_price}
+    ✨ Difference: ₹{diff:2f} ({percent:+.2f}%)
 
-Stay updated and invest wisely!
-"""
+    Stay updated and invest wisely!
+    """
 
 
-# SCHEDULING LOGIC 
-if delay_seconds <= 0:
-    print('The specified time is in the past. Please update the schedule_date or schedule_time.')
-else:
-    print(f'Message scheduled to be sent to {recipient_name} at {schedule_datetime}')
-    time.sleep(delay_seconds)
+# Saves the stock's price to a JSON file.
+def save_yesterday_price(stock_name, stock_price):
+    data = {stock_name: stock_price}
+    with open('yesterday_prices.json', 'w') as file:
+        json.dump(data, file)
 
-    # Fetch stock data
+
+# Reads yesterday's stock price from the JSON file.
+def get_yesterday_price(stock_name):
+    try:
+        if not os.path.exists("yesterday_prices.json"):
+            print("Creating yesterday_prices.json with empty data.")
+            with open('yesterday_prices.json', 'w') as f:
+                json.dump({}, f)
+
+        with open('yesterday_prices.json', 'r') as file:
+            data = json.load(file)
+            return float(data.get(stock_name))
+    except (ValueError, TypeError):
+        return None
+
+
+# Sends daily summary email and WhatsApp at 9:17 AM.
+def job_send_daily_summary():
     stock_name, stock_price = get_stock_data(url)
-    custom_msg = create_stock_message(stock_name, stock_price)
-
-    # Sending Whatsapp 
-    send_whatsapp_msg(recipient_number, custom_msg)
+    try:
+        stock_price = float(stock_price.replace(',',''))
+    except:
+        print("Stock price conversion failed")
+        return
     
-    # Sending Mail
-    email_subject = f"Stock Alert: {stock_name}"
-    email_status = sending_mail(email_subject, custom_msg)
-    print("Email sent status: ", email_status)
+    yesterday_price = get_yesterday_price(stock_name)
 
-    print("Stock Name:", stock_name)
-    print("Stock Price:", stock_price)
+    if stock_price is None or yesterday_price is None:
+        print("Missing Price Data")
+        return 
+    
+    message = create_stock_message(stock_name, stock_price, yesterday_price)
+
+    sending_mail(Sender, Receiver, subject=f"{stock_name} Daily Summary", body=message)
+    send_whatsapp_msg(recipient_number, message)
+
+
+# Sends alerts every 15 minutes during market hours.
+def job_send_15_min_alert():
+    stock_name, stock_price = get_stock_data(url)
+    try:
+        stock_price = float(stock_price.replace(',',''))
+    except:
+        print("Stock price conversion failed")
+        return
+    
+    yesterday_price = get_yesterday_price(stock_name)
+
+    if stock_price is None or yesterday_price is None:
+        print("Missing price Data")
+        return
+
+    message = create_stock_message(stock_name, stock_price, yesterday_price)
+
+    sending_mail(Sender, Receiver, subject=f"{stock_name} 15-Min Price Update", body=message)
+    send_whatsapp_msg(recipient_number, message)
+
+
+# Saves the stock price at 4 PM to be used as yesterday's reference.
+def job_save_yesterday_price():
+    stock_name, stock_price = get_stock_data(url)
+    
+    try:
+        stock_price = float(stock_price.replace(',',''))
+        save_yesterday_price(stock_name, stock_price)
+        print(f"Saved yesterday's price for {stock_name}: ₹{stock_price}")
+    except:
+        print("Failed to fetch or save yesterday's price")
+
+
+
+# Main function
+def main():
+    print("Stock Price Monitoring Starting...")
+
+    print("Testing Stock Data Fetch")
+    stock_name, stock_price = get_stock_data(url)
+    print(f"Stock Name: {stock_name}")
+    print(f"Stock Price: {stock_price}")
+
+    if stock_name == "Error" or stock_price == "Error":
+        print("Warning: Initial stock data fetch failed. Check your internet connection and URL.")
+
+    # Sets up and starts the APScheduler jobs.
+    scheduler.add_job(
+        job_save_yesterday_price,
+        CronTrigger(hour=21, minute=47),
+        name="Save Yesterday's Price (4 PM)"
+    )
+
+    # Daily Summary eamil at 9:17 AM
+    scheduler.add_job(
+        job_send_daily_summary,
+        CronTrigger(hour=21, minute=48),
+        name='Daily Summary Email'
+    )
+
+    # Alert every 15 minute
+    scheduler.add_job(
+        job_send_15_min_alert,
+        CronTrigger(minute='*/2', hour='9-23'),
+        name='15 min Alert'
+    )
+
+    print("Scheduler configured:")
+    print("Daily Summary: 9:17 AM")
+    print("15 min alerts: Every 15 min from 9 AM to 4 PM")
+    print("\nStarting scheduler... Press Ctrl+C to stop")
+
+    # starting scheduler 
+    try:
+        scheduler.start()
+    except (KeyboardInterrupt, SystemExit):
+        print("\nShutting down scheduler....")
+        scheduler.shutdown()
+        print("Scheduler stopped.")
+
+
+if __name__ == "__main__":
+    main()
