@@ -1,25 +1,27 @@
-TODO:
-NOTE: make sure to create separate functions for each task (email one function, WhatsApp one function)
+✅ Scrape stock name and price using the Groww URL – Completed
+✅ Use XPath to find the second child of a <div> element – Completed
+✅ Send an email using SMTP in Python – Completed
+✅ Send WhatsApp messages using Python (using Twilio module) – Completed
 
-1) Use Groww URL to scrape the name and price - DONE
-2) Find the second child of a div using XPath - DONE
-3) How to send an email using SMTP in Python - DONE
-4) How to send WhatsApp message using Python (explore Twilio module) - DONE
-5) Stock info(name and price) should be sent to Email and WhatsApp at 9:17 am IST, and how much is the difference in Plus/Minus from the last day, that info should  also be sent
-6)      Last day price: 100 Rs Store it before 9 am
-        Email: 9.17 am
-        IRCON:
-        Today's Price: 50 Rs
-        Difference from yesterday: -50Rs and -50%
+At 9:17 AM IST, send stock information (name and price) via Email and WhatsApp
+Also include the price difference (+/-) from the previous day
+Store the previous day’s price before 9:00 AM
 
-7)  Send the price alert every 15 minutes:    
-        15 Minutes Alert:
-        IRCON:203
+Example:
+        Last day price: ₹100
+        IRCON
+        Today’s price: ₹50
+        Difference: -₹50 and -50%
+        Send a price alert every 15 minutes
 
-- 1. create one single function for taking stock name and price - DONE
-- 2. Send emails to multiple email ids -DONE
-- 3. Changes in Mail function with function arguments - DONE
-- 4. search all possible scheduling packages in python and use the one which suites the most - DONE
+Example:
+        15-minute alert:
+        IRCON: ₹203
 
-1) Create seperate file for mail function
-2) Create seperate file for whatsapp function
+✅ Create a single reusable function to fetch stock name and price – Completed
+✅ Send emails to multiple recipients – Completed
+✅ Modify the mail function to accept dynamic arguments – Completed
+✅ Explore and choose the most suitable Python scheduling package – Completed
+
+🔧 Create a separate file for the mail-sending function – Completed
+🔧 Create a separate file for the WhatsApp-sending function – Completed
