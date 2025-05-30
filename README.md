@@ -34,14 +34,15 @@ A Python-based automation system to track and alert stock prices from [Groww](ht
 ### 3. Add Environment Variables
 Create a .env file and fill it with your credentials:
 
-    EMAIL_SENDER = youremail@gmail.com
-    RECEIVER_EMAIL = receiver1@example.com,receiver2@example.com
-    APP_PASSWORD = your_app_password
-    RECIPIENT_NAME = John Doe
-    RECIPIENT_NUMBER = whatsapp:+91xxxxxxxxxx
-    TWILIO_ACCOUNT_SID = your_twilio_sid
-    TWILIO_AUTH_TOKEN = your_twilio_token
-    TWILIO_NUMBER = whatsapp:+14xxxxxxxxxx
+    EMAIL_SENDER = your_email@email.com
+    APP_PASSWORD = app_pass_from_gamil
+    RECEIVER_EMAIL = you_want_to_send1@mail.com, you_want_to_send2@mail.com
+    ACCOUNT_SID = your_account_sid
+    AUTH_TOKEN = twilio_auth_token
+    RECIPIENT_NAME = your_name
+    RECIPIENT_NUMBER = +91xxxxxxxxxx
+    TWILIO_WHATSAPP_NUMBER = +14xxxxxxxxxx
+
 
 💡 Gmail users need to generate an App Password from their Google Account if 2FA is enabled.
 
@@ -49,7 +50,7 @@ Create a .env file and fill it with your credentials:
 
     Subject: IRCON Daily Summary
 
-    Hello John Doe,
+    Hello Rishabh Dhawad,
     📈 Stock Alert:
     ✨ IRCON
     ✨ Current Price: ₹203
